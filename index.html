@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur Prêts Immobiliers Aidés (PTZ, PC, PAS)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            max-width: 900px;
+            width: 100%;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 30px 35px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: #1a1a2e;
+            margin-top: 0;
+            margin-bottom: 5px;
+            border-bottom: 3px solid #0f3460;
+            display: inline-block;
+            padding-bottom: 8px;
+        }
+        .subtitle {
+            color: #555;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: 600;
+            color: #16213e;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        input, select {
+            padding: 12px 14px;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: 0.2s;
+            background: #fafafa;
+        }
+        input:focus, select:focus {
+            border-color: #0f3460;
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(15,52,96,0.1);
+        }
+        .hint {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        button {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 16px 28px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 0 8px 16px rgba(15,52,96,0.3);
+        }
+        button:hover {
+            background: #1a4a7a;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(15,52,96,0.4);
+        }
+        .results {
+            margin-top: 30px;
+            background: #eef2f7;
+            border-radius: 20px;
+            padding: 20px 25px;
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #cbd5e0;
+            font-size: 1rem;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            font-weight: 500;
+            color: #2d3748;
+        }
+        .result-value {
+            font-weight: 700;
+            color: #0f3460;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+        .badge-eligible {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .badge-ineligible {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .note {
+            font-size: 0.8rem;
+            color: #4a5568;
+            margin-top: 15px;
+            font-style: italic;
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .full-width {
+                grid-column: span 1;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏠 Simulateur Prêts Aidés</h1>
+    <div class="subtitle">PTZ · Prêt Conventionné (PC) · Prêt d'Accession Sociale (PAS) — Estimation 2025/2026</div>
+
+    <div class="grid">
+        <!-- Informations personnelles -->
+        <div class="form-group">
+            <label>Nombre de personnes dans le foyer</label>
+            <select id="persons">
+                <option value="1">1 personne</option>
+                <option value="2" selected>2 personnes</option>
+                <option value="3">3 personnes</option>
+                <option value="4">4 personnes</option>
+                <option value="5">5 personnes</option>
+                <option value="6">6 personnes</option>
+                <option value="7">7 personnes</option>
+                <option value="8">8 personnes et +</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Revenu Fiscal de Référence (RFR) N-2</label>
+            <input type="number" id="income" placeholder="Ex: 35000" value="35000" min="0" step="1000">
+            <span class="hint">Revenu total du foyer (avis d'imposition de l'année N-2).</span>
+        </div>
+
+        <div class="form-group">
+            <label>Zone géographique du bien</label>
+            <select id="zone">
+                <option value="A">Zone A / A bis (Paris, Côte d'Azur, etc.)</option>
+                <option value="B1" selected>Zone B1 (Grandes villes, banlieue parisienne)</option>
+                <option value="B2">Zone B2 (Villes moyennes)</option>
+                <option value="C">Zone C (Rural, petites villes)</option>
+            </select>
+            <span class="hint">Consultez le zonage sur service-public.fr.</span>
+        </div>
+
+        <div class="form-group">
+            <label>Coût total de l'opération (TTC)</label>
+            <input type="number" id="cost" placeholder="Ex: 200000" value="200000" min="0" step="5000">
+            <span class="hint">Achat + travaux + frais de négociation (hors frais de notaire).</span>
+        </div>
+
+        <!-- Primo-accédant pour PTZ -->
+        <div class="form-group full-width">
+            <label>Êtes-vous primo-accédant ? (pour le PTZ)</label>
+            <select id="primo">
+                <option value="oui" selected>Oui, je n'ai pas été propriétaire de ma résidence principale depuis 2 ans</option>
+                <option value="non">Non (ou je ne suis pas dans les exceptions)</option>
+            </select>
+        </div>
+    </div>
+
+    <button id="simulateBtn">Estimer mes prêts</button>
+
+    <div id="results" class="results">
+        <h3 style="margin-top:0; color:#16213e;">📊 Résultats de simulation</h3>
+        <div id="resultsContent"></div>
+        <div class="note">
+            ⚠️ Ce simulateur fournit une estimation indicative basée sur les plafonds officiels. 
+            Les montants réels dépendent de votre situation financière, de la banque et de l'évolution des taux. 
+            Pour le PC et le PAS, le montant est fixé par la banque selon votre capacité d'emprunt.
+        </div>
+    </div>
+</div>
+
+<script>
+    // Plafonds de revenus PTZ (offre de prêt à partir d'avril 2025) - Source : service-public.fr
+    // Structure : zone -> nbPersonnes (1 à 8+) -> revenu max
+    const PTZ_INCOME_LIMITS = {
+        'A':  { 1: 49000, 2: 73500, 3: 88200, 4: 102900, 5: 117600, 6: 132300, 7: 147000, 8: 161700 },
+        'B1': { 1: 34500, 2: 51750, 3: 62100, 4: 72450, 5: 82800, 6: 93150, 7: 103500, 8: 113850 },
+        'B2': { 1: 31500, 2: 47250, 3: 56700, 4: 66150, 5: 75600, 6: 85050, 7: 94500, 8: 103950 },
+        'C':  { 1: 28500, 2: 42750, 3: 51300, 4: 59850, 5: 68400, 6: 76950, 7: 85500, 8: 94050 }
+    };
+
+    // Tranches de revenus PTZ (Revenu / Coefficient familial) - Source : service-public.fr
+    // Les seuils sont donnés pour le revenu divisé par le coefficient.
+    // Coefficient familial : 1 pers = 1; 2 pers = 1.5? (En réalité le coefficient est 1 pour 1, 1.5 pour 2, etc. Mais service-public donne les tranches directement)
+    // Pour simplifier, nous utilisons les tranches "Revenu / Coefficient" fournies.
+    // Les données ci-dessous sont pour le revenu divisé par le coefficient familial.
+    // Tranche 1: jusqu'à 25000 (A), 21500 (B1), 18000 (B2), 15000 (C)
+    // Tranche 2: 25001-31000 (A), etc.
+    // Tranche 3: 31001-37000 (A), etc.
+    // Tranche 4: 37001-49000 (A), etc.
+    // Les pourcentages de couverture du PTZ : T1=50%, T2=40%? (Vérifions la source: le texte dit T1=50%, T2=?, T3=40%, T4=20%)
+    // En réalité, la page service-public indique pour les pourcentages: 
+    // "Voici ces pourcentages : ... 50 % ... 40 % ... Tranche 4 20 %"
+    // Il manque la tranche 2 et 3 dans l'extrait. Mais d'après les règles classiques: T1=50%, T2=40%, T3=40%? Non, souvent T1=50, T2=40, T3=40, T4=20? 
+    // Pour être précis, nous allons afficher un message d'information plutôt que de calculer un montant erroné.
+    // Le but est de vérifier l'éligibilité et d'afficher les plafonds.
+
+    const PTZ_TRANCHE_THRESHOLDS = {
+        'A':  [25000, 31000, 37000, 49000],
+        'B1': [21500, 26000, 30000, 34500],
+        'B2': [18000, 22500, 27000, 31500],
+        'C':  [15000, 19500, 24000, 28500]
+    };
+
+    // Plafonds de revenus PAS (Prêt d'Accession Sociale) - Source approximative service-public (F22158)
+    // Les plafonds PAS sont généralement alignés sur les plafonds PSLA / TVA réduite.
+    // D'après le BOFiP 2026 pour l'accession sociale (TVA réduite) - Source : BOFiP BOI-BAREME-000016
+    const PAS_INCOME_LIMITS = {
+        'A':  { 1: 38844, 2: 58057, 3: 76105, 4: 90863, 5: 108107, 6: 121650, 7: 135207, 8: 148764 }, // +13557 par pers supp
+        'B1': { 1: 33771, 2: 45100, 3: 69786, 4: 83594, 5: 98956, 6: 111359, 7: 123767, 8: 136175 }, // +12408
+        'B2': { 1: 29773, 2: 45100, 3: 54235, 4: 65476, 5: 77023, 6: 86805, 7: 96488, 8: 106171 }, // +9683 (approx B2/C)
+        'C':  { 1: 29773, 2: 45100, 3: 54235, 4: 65476, 5: 77023, 6: 86805, 7: 96488, 8: 106171 }
+    };
+
+    // Fonction pour obtenir la limite de revenu PTZ
+    function getPTZLimit(zone, persons) {
+        const p = Math.min(persons, 8); // 8 signifie "8 et +"
+        return PTZ_INCOME_LIMITS[zone][p];
+    }
+
+    // Fonction pour obtenir la limite de revenu PAS
+    function getPASLimit(zone, persons) {
+        let p = Math.min(persons, 8);
+        // Pour 8+, on extrapole à partir de 7 + incrément
+        if (persons >= 8) {
+            // On utilise la valeur pour 7 + incrément (approx)
+            const base7 = PAS_INCOME_LIMITS[zone][7];
+            const inc = zone === 'A' ? 13557 : (zone === 'B1' ? 12408 : 9683);
+            return base7 + inc;
+        }
+        return PAS_INCOME_LIMITS[zone][p];
+    }
+
+    // Calcul du coefficient familial (simplifié pour le PTZ)
+    // Le coefficient est de 1 pour 1 personne, 1.5 pour 2, 1.8 pour 3, 2.1 pour 4, etc. (approximation)
+    // Mais service-public divise le revenu par le coefficient. Nous allons afficher la tranche.
+    function getCoefficient(persons) {
+        if (persons === 1) return 1;
+        if (persons === 2) return 1.5;
+        if (persons === 3) return 1.8;
+        if (persons === 4) return 2.1;
+        if (persons === 5) return 2.4;
+        if (persons === 6) return 2.7;
+        if (persons === 7) return 3.0;
+        return 3.3; // 8+
+    }
+
+    document.getElementById('simulateBtn').addEventListener('click', function() {
+        const persons = parseInt(document.getElementById('persons').value);
+        const income = parseFloat(document.getElementById('income').value) || 0;
+        const zone = document.getElementById('zone').value;
+        const cost = parseFloat(document.getElementById('cost').value) || 0;
+        const primo = document.getElementById('primo').value === 'oui';
+
+        // --- Vérification PTZ ---
+        let ptzEligible = false;
+        let ptzMessage = '';
+        let ptzDetail = '';
+
+        if (!primo) {
+            ptzEligible = false;
+            ptzMessage = 'Non éligible : vous devez être primo-accédant (sauf exceptions).';
+        } else {
+            const limitPTZ = getPTZLimit(zone, persons);
+            if (income <= limitPTZ) {
+                ptzEligible = true;
+                ptzMessage = `Éligible (Revenu ${income.toLocaleString('fr-FR')} € ≤ plafond ${limitPTZ.toLocaleString('fr-FR')} €)`;
+                
+                // Calcul de la tranche (approximatif)
+                const coef = getCoefficient(persons);
+                const incomeDiv = income / coef;
+                const thresholds = PTZ_TRANCHE_THRESHOLDS[zone];
+                let tranche = 4; // par défaut tranche 4
+                if (incomeDiv <= thresholds[0]) tranche = 1;
+                else if (incomeDiv <= thresholds[1]) tranche = 2;
+                else if (incomeDiv <= thresholds[2]) tranche = 3;
+                else if (incomeDiv <= thresholds[3]) tranche = 4;
+                else tranche = 4; // au-delà
+
+                // Pourcentage théorique (approximatif car les données exactes manquent pour T2/T3)
+                let pourcentage = '20% - 50% selon tranche';
+                if (tranche === 1) pourcentage = '50%';
+                else if (tranche === 4) pourcentage = '20%';
+                
+                ptzDetail = `Tranche de revenu estimée : ${tranche} (Revenu/Coef ≈ ${Math.round(incomeDiv).toLocaleString('fr-FR')} €). Taux de couverture possible : ${pourcentage}.`;
+                
+                // Note: le montant exact du PTZ dépend aussi du coût plafonné et des autres prêts.
+                // On ne calcule pas de montant en euros pour éviter les erreurs.
+            } else {
+                ptzEligible = false;
+                ptzMessage = `Non éligible : revenu ${income.toLocaleString('fr-FR')} € > plafond ${limitPTZ.toLocaleString('fr-FR')} € pour ${persons} pers. en zone ${zone}.`;
+            }
+        }
+
+        // --- Vérification PAS ---
+        let pasEligible = false;
+        let pasMessage = '';
+        const limitPAS = getPASLimit(zone, persons);
+        if (income <= limitPAS) {
+            pasEligible = true;
+            pasMessage = `Éligible (Revenu ${income.toLocaleString('fr-FR')} € ≤ plafond ${limitPAS.toLocaleString('fr-FR')} €)`;
+        } else {
+            pasEligible = false;
+            pasMessage = `Non éligible : revenu ${income.toLocaleString('fr-FR')} € > plafond ${limitPAS.toLocaleString('fr-FR')} €.`;
+        }
+
+        // --- Prêt Conventionné (PC) ---
+        // Pas de condition de ressources, mais taux plafonné.
+        const pcMessage = 'Accessible sans condition de ressources (taux d\'intérêt plafonné).';
+        const pcEligible = true; // Toujours "éligible" au sens des ressources
+
+        // Affichage
+        const resultsDiv = document.getElementById('results');
+        const contentDiv = document.getElementById('resultsContent');
+        
+        let html = '';
+
+        // PTZ
+        html += `<div class="result-item">
+            <span class="result-label">Prêt à Taux Zéro (PTZ)</span>
+            <span class="result-value">${ptzEligible ? '<span class="badge badge-eligible">Éligible</span>' : '<span class="badge badge-ineligible">Non éligible</span>'}</span>
+        </div>
+        <div style="font-size:0.9rem; color:#4a5568; margin-bottom:12px; padding-left:10px;">${ptzMessage}</div>`;
+        if (ptzDetail) {
+            html += `<div style="font-size:0.85rem; color:#2b6cb0; margin-bottom:15px; padding-left:10px; background:#ebf8ff; padding:8px; border-radius:8px;">ℹ️ ${ptzDetail}</div>`;
+        }
+
+        // PAS
+        html += `<div class="result-item">
+            <span class="result-label">Prêt d'Accession Sociale (PAS)</span>
+            <span class="result-value">${pasEligible ? '<span class="badge badge-eligible">Éligible</span>' : '<span class="badge badge-ineligible">Non éligible</span>'}</span>
+        </div>
+        <div style="font-size:0.9rem; color:#4a5568; margin-bottom:15px; padding-left:10px;">${pasMessage}</div>`;
+
+        // PC
+        html += `<div class="result-item">
+            <span class="result-label">Prêt Conventionné (PC)</span>
+            <span class="result-value"><span class="badge badge-eligible">Accessible</span></span>
+        </div>
+        <div style="font-size:0.9rem; color:#4a5568; margin-bottom:15px; padding-left:10px;">${pcMessage}</div>`;
+
+        // Note sur le montant
+        html += `<div style="margin-top:15px; font-size:0.85rem; color:#744210; background:#fefcbf; padding:10px; border-radius:8px;">
+            💡 <strong>Estimation du montant :</strong> Le PTZ peut couvrir une partie du coût (selon tranche et plafonds). 
+            Pour le PC et le PAS, le montant dépend de votre capacité d'emprunt et des offres des banques. 
+            Utilisez un simulateur bancaire pour obtenir un montant précis.
+        </div>`;
+
+        contentDiv.innerHTML = html;
+        resultsDiv.classList.add('show');
+    });
+</script>
+</body>
+</html>
