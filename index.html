@@ -301,6 +301,25 @@
         .banks-intro { font-size: 0.9rem; color: #4a5568; margin-bottom: 15px; line-height: 1.5; }
         .bank-card, .bank-meta, .banks-warning, .banks-intro, .bank-name { overflow-wrap: anywhere; word-break: break-word; }
 
+
+        /* ===== Financement : apport et mensualités ===== */
+        .form-subtitle { margin: 6px 0 0; font-size: 1.05rem; color: #0f3460; border-top: 1px dashed #cbd5e0; padding-top: 14px; }
+        .form-group[hidden] { display: none; }
+        .financing-box { margin-top: 18px; }
+        .financing-box h4 { margin: 0 0 8px; color: #16213e; font-size: 1.05rem; }
+        .financing-summary { font-size: 0.9rem; color: #2d3748; line-height: 1.6; margin-bottom: 10px; }
+        .table-scroll { overflow-x: auto; max-width: 100%; border-radius: 10px; }
+        .mens-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: #fff; }
+        .mens-table th, .mens-table td { padding: 9px 10px; text-align: right; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+        .mens-table th:first-child, .mens-table td:first-child { text-align: left; font-weight: 700; color: #0f3460; }
+        .mens-table thead th { background: #e2e8f0; color: #1a202c; font-size: 0.8rem; white-space: normal; }
+        .mens-table td.main-val { font-weight: 700; color: #0f3460; }
+        .mens-table td.ceiling { color: #718096; }
+        .mens-table .age-ok { color: #22543d; }
+        .mens-table .age-warn { color: #b7791f; }
+        .mens-table .age-ko { color: #c53030; }
+        .fin-note { font-size: 0.8rem; color: #4a5568; line-height: 1.55; margin-top: 8px; }
+
         /* Responsive */
         @media (max-width: 700px) {
             body {
@@ -400,6 +419,49 @@
             <label for="age">Âge de l'emprunteur le plus âgé (facultatif)</label>
             <input type="number" id="age" placeholder="Ex : 38" min="18" max="99" step="1">
             <span class="hint">Aucune limite d'âge légale : l'âge influe surtout sur la durée du prêt et l'assurance emprunteur.</span>
+        </div>
+
+        <div class="form-group full-width">
+            <h3 class="form-subtitle">💶 Financement (apport et mensualités)</h3>
+        </div>
+
+        <div class="form-group">
+            <label for="apport">Apport personnel</label>
+            <select id="apport">
+                <option value="0">Aucun apport (0 %)</option>
+                <option value="5">5 % du coût de l'opération</option>
+                <option value="10" selected>10 % du coût de l'opération</option>
+                <option value="15">15 % du coût de l'opération</option>
+                <option value="20">20 % du coût de l'opération</option>
+                <option value="30">30 % du coût de l'opération</option>
+                <option value="custom">Autre montant (en €)…</option>
+            </select>
+            <span class="hint">L'apport sert souvent à payer les frais de notaire et de garantie, que le PC et le PAS ne financent pas.</span>
+        </div>
+
+        <div class="form-group" id="apportCustomGroup" hidden>
+            <label for="apportCustom">Montant de l'apport (€)</label>
+            <input type="number" id="apportCustom" placeholder="Ex : 25000" min="0" step="1000">
+        </div>
+
+        <div class="form-group">
+            <label for="rate">Taux nominal du prêt principal (% par an)</label>
+            <input type="number" id="rate" value="3.75" min="0" max="15" step="0.05">
+            <span class="hint">Valeur indicative proche des taux moyens relevés par les courtiers en novembre 2026 (environ 3,6 à 3,9 % selon la durée, hors assurance). Remplacez-la par le taux de votre offre.</span>
+        </div>
+
+        <div class="form-group">
+            <label for="insurance">Assurance emprunteur (% par an du capital, facultatif)</label>
+            <input type="number" id="insurance" placeholder="Ex : 0.30" min="0" max="5" step="0.01">
+            <span class="hint">Si renseignée, elle est ajoutée à la mensualité (calculée sur le capital emprunté). Elle augmente avec l'âge.</span>
+        </div>
+
+        <div class="form-group">
+            <label for="includePtz">Déduire le PTZ estimé du prêt principal ?</label>
+            <select id="includePtz">
+                <option value="oui" selected>Oui (si le PTZ est calculé)</option>
+                <option value="non">Non</option>
+            </select>
         </div>
     </div>
 
@@ -570,6 +632,85 @@
         };
     }
 
+    // Financement : apport + mensualités selon la durée
+    const DURATIONS = [10, 15, 20, 25, 30];
+    const DEFAULT_RATE = 3.75;   // taux indicatif (moyennes courtiers, novembre 2026)
+
+    // Taux d'intérêt maximum (plafond réglementaire) du PC et du PAS, offres émises à partir de novembre 2026
+    function ceilingRate(years) {
+        if (years <= 12) return 6.45;
+        if (years <= 15) return 6.65;
+        if (years <= 20) return 6.80;
+        return 6.90;
+    }
+
+    function monthlyPayment(principal, annualRatePct, years) {
+        const n = years * 12;
+        const r = annualRatePct / 100 / 12;
+        if (principal <= 0) return 0;
+        if (r === 0) return principal / n;
+        return principal * r / (1 - Math.pow(1 + r, -n));
+    }
+
+    function parseDecimal(v) {
+        if (v === '' || v === null || v === undefined) return NaN;
+        return parseFloat(String(v).replace(',', '.'));
+    }
+
+    function computeFinancing(input, result) {
+        const cost = result.cost;
+        if (!(cost > 0)) return null;
+
+        let apport;
+        if (input.apportMode === 'custom') {
+            apport = Math.max(parseDecimal(input.apportCustom) || 0, 0);
+        } else {
+            apport = cost * Math.max(parseDecimal(input.apportMode) || 0, 0) / 100;
+        }
+        apport = Math.min(apport, cost);
+
+        const rawRate = parseDecimal(input.rate);
+        const rateValid = Number.isFinite(rawRate) && rawRate >= 0 && rawRate <= 15;
+        const rate = rateValid ? rawRate : DEFAULT_RATE;
+
+        const rawIns = parseDecimal(input.insurance);
+        const insurance = (Number.isFinite(rawIns) && rawIns >= 0 && rawIns <= 5) ? rawIns : 0;
+
+        const ptzAmount = (input.includePtz !== false && result.ptz.eligible && typeof result.ptz.amount === 'number')
+            ? Math.min(result.ptz.amount, cost - apport) : 0;
+        const principal = Math.max(cost - apport - ptzAmount, 0);
+
+        const ageInfo = result.ageInfo && !result.ageInfo.invalid ? result.ageInfo : null;
+        const rows = DURATIONS.map(function (years) {
+            const monthly = monthlyPayment(principal, rate, years);
+            const monthlyIns = principal * insurance / 100 / 12;
+            const ceil = ceilingRate(years);
+            let ageFlag = null;
+            if (ageInfo) {
+                const endAge = ageInfo.age + years;
+                ageFlag = endAge <= AGE_END_STANDARD ? 'ok' : (endAge <= AGE_END_LENIENT ? 'warn' : 'ko');
+            }
+            return {
+                years: years,
+                monthly: monthly,
+                monthlyIns: monthlyIns,
+                monthlyTotal: monthly + monthlyIns,
+                interest: Math.max(monthly * years * 12 - principal, 0),
+                ceilingRate: ceil,
+                ceilingMonthly: monthlyPayment(principal, ceil, years),
+                endAge: ageInfo ? ageInfo.age + years : null,
+                ageFlag: ageFlag
+            };
+        });
+
+        return {
+            cost: cost, apport: apport, apportPct: apport / cost * 100,
+            ptzAmount: ptzAmount, principal: principal,
+            rate: rate, rateDefaulted: !rateValid, insurance: insurance,
+            rows: rows, hasAge: !!ageInfo
+        };
+    }
+
     function simulate(input) {
         const persons = Math.min(Math.max(parseInt(input.persons, 10) || 1, 1), 8);
         const income = Math.max(Number(input.income) || 0, 0);
@@ -640,6 +781,9 @@
         // --- Âge (information seulement, aucun effet sur l'éligibilité réglementaire) ---
         result.ageInfo = computeAgeInfo(input.age);
 
+        // --- Financement : apport et mensualités ---
+        result.financing = computeFinancing(input, result);
+
         return result;
     }
 
@@ -682,6 +826,56 @@
         return `<div class="info-flag">${txt}</div>`;
     }
 
+    function renderFinancing(f) {
+        if (!f) return '';
+        let html = `<div class="financing-box"><h4>💶 Estimation des mensualités selon la durée</h4>`;
+        html += `<div class="financing-summary">
+            Coût de l'opération : <strong>${fmt(f.cost)} €</strong> · apport : <strong>${fmt(f.apport)} €</strong> (${fmt(f.apportPct)} %)` +
+            (f.ptzAmount > 0 ? ` · PTZ estimé déduit : <strong>${fmt(f.ptzAmount)} €</strong>` : '') +
+            `<br>Prêt principal estimé : <strong>${fmt(f.principal)} €</strong> à <strong>${String(f.rate).replace('.', ',')} %</strong>` +
+            (f.insurance > 0 ? ` + assurance ${String(f.insurance).replace('.', ',')} %/an` : ' (hors assurance)') +
+            (f.rateDefaulted ? ` <em>(taux saisi invalide : ${String(DEFAULT_RATE).replace('.', ',')} % utilisé)</em>` : '') +
+            `</div>`;
+
+        if (f.principal <= 0) {
+            return html + `<div class="info-flag">L'apport${f.ptzAmount > 0 ? ' et le PTZ estimé couvrent' : ' couvre'} la totalité du coût saisi : aucun prêt principal n'est nécessaire dans cette estimation.</div></div>`;
+        }
+
+        html += `<div class="table-scroll"><table class="mens-table">
+            <thead><tr>
+                <th>Durée</th>
+                <th>Mensualité${f.insurance > 0 ? ' (hors assurance)' : ''}</th>` +
+                (f.insurance > 0 ? `<th>Assurance / mois</th><th>Total / mois</th>` : '') +
+                `<th>Intérêts totaux</th>
+                <th>Au taux plafond PC/PAS</th>
+            </tr></thead><tbody>`;
+        f.rows.forEach(function (row) {
+            const flag = row.ageFlag
+                ? ` <span class="age-${row.ageFlag}" title="Âge atteint en fin de prêt : ${row.endAge} ans">` +
+                  (row.ageFlag === 'ok' ? '' : row.ageFlag === 'warn' ? '⚠' : '⛔') + `</span>`
+                : '';
+            html += `<tr>
+                <td>${row.years} ans${flag}</td>
+                <td class="main-val">${fmt(row.monthly)} €</td>` +
+                (f.insurance > 0 ? `<td>${fmt(row.monthlyIns)} €</td><td class="main-val">${fmt(row.monthlyTotal)} €</td>` : '') +
+                `<td>${fmt(row.interest)} €</td>
+                <td class="ceiling">${fmt(row.ceilingMonthly)} € <small>(${String(row.ceilingRate).replace('.', ',')} %)</small></td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+
+        html += `<div class="fin-note">`;
+        if (f.hasAge) {
+            html += `⚠ = fin de prêt au-delà de ${AGE_END_STANDARD} ans ; ⛔ = au-delà de ${AGE_END_LENIENT} ans (repères de marché, voir ci-dessus). `;
+        }
+        html += `La dernière colonne montre la mensualité si la banque appliquait le <strong>taux maximum autorisé</strong> pour le PC et le PAS
+            (offres à partir de novembre 2026) : c'est un plafond légal, pas le taux que vous obtiendrez. Calcul à mensualités constantes, capital emprunté fixe, sans frais de dossier ni garantie.` +
+            (f.ptzAmount > 0 ? ` Le PTZ (0 %) se rembourse à part, après un éventuel différé : ses échéances ne sont pas incluses ici.` : '') +
+            ` Le PC et le PAS durent de 5 à 30 ans (35 ans par allongement), et les banques limitent en général le taux d'endettement à 35 % des revenus, assurance comprise.` +
+            `</div></div>`;
+        return html;
+    }
+
     function renderResults(r) {
         let html = '';
 
@@ -707,6 +901,7 @@
         <div class="result-sub">${r.pc.message}</div>`;
 
         html += renderAge(r.ageInfo);
+        html += renderFinancing(r.financing);
 
         if (r.floorIncomeWarning) {
             html += `<div class="info-flag">
@@ -726,6 +921,12 @@
     }
 
     if (typeof document !== 'undefined') {
+        document.getElementById('apport').addEventListener('change', function () {
+            document.getElementById('apportCustomGroup').hidden = (this.value !== 'custom');
+        });
+    }
+
+    if (typeof document !== 'undefined') {
         document.getElementById('simulateBtn').addEventListener('click', function () {
             const result = simulate({
                 persons: document.getElementById('persons').value,
@@ -734,7 +935,12 @@
                 cost: document.getElementById('cost').value,
                 operation: document.getElementById('operation').value,
                 primo: document.getElementById('primo').value === 'oui',
-                age: document.getElementById('age').value
+                age: document.getElementById('age').value,
+                apportMode: document.getElementById('apport').value,
+                apportCustom: document.getElementById('apportCustom').value,
+                rate: document.getElementById('rate').value,
+                insurance: document.getElementById('insurance').value,
+                includePtz: document.getElementById('includePtz').value === 'oui'
             });
             document.getElementById('resultsContent').innerHTML = renderResults(result);
             document.getElementById('results').classList.add('show');
