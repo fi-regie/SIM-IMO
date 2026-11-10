@@ -171,34 +171,63 @@
             margin-top: 0;
             margin-bottom: 20px;
         }
-        .condition-card {
+
+        /* === DÉPLIANTS (details/summary) === */
+        .condition-details {
             background: #f8fafc;
             border-left: 5px solid #0f3460;
             border-radius: 12px;
-            padding: 20px 25px;
-            margin-bottom: 25px;
+            margin-bottom: 16px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            overflow: hidden;
         }
-        .condition-card h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
+        .condition-details summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 18px 22px;
+            font-weight: 700;
+            font-size: 1.15rem;
             color: #0f3460;
-            font-size: 1.2rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
+            transition: background 0.2s;
+            user-select: none;
         }
-        .condition-card ul {
+        .condition-details summary::-webkit-details-marker {
+            display: none;
+        }
+        .condition-details summary::before {
+            content: '▶';
+            font-size: 0.8rem;
+            color: #0f3460;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .condition-details[open] summary::before {
+            transform: rotate(90deg);
+        }
+        .condition-details summary:hover {
+            background: #edf2f7;
+        }
+        .condition-details summary:focus-visible {
+            outline: 3px solid #90cdf4;
+            outline-offset: -3px;
+        }
+        .condition-details .condition-body {
+            padding: 0 22px 20px 22px;
+        }
+        .condition-details ul {
             margin: 0;
             padding-left: 20px;
             color: #2d3748;
             line-height: 1.7;
         }
-        .condition-card li {
+        .condition-details li {
             margin-bottom: 8px;
         }
-        .condition-card strong {
+        .condition-details strong {
             color: #1a202c;
         }
         .tag {
@@ -209,7 +238,7 @@
             font-size: 0.75rem;
             font-weight: 700;
             color: #4a5568;
-            margin-left: 10px;
+            margin-left: 4px;
         }
 
         /* Ajouts de la version corrigée */
@@ -250,10 +279,27 @@
         button:focus-visible { outline: 3px solid #90cdf4; outline-offset: 3px; }
 
         /* Empêche le débordement des textes longs */
-        .container, .result-item, .result-sub, .detail-box, .info-flag, .note, .condition-card li, .verify-note {
+        .container, .result-item, .result-sub, .detail-box, .info-flag, .note, .condition-details li, .verify-note {
             overflow-wrap: anywhere;
             word-break: break-word;
         }
+
+
+        /* ===== Section banques par département ===== */
+        .banks-section { margin-top: 40px; border-top: 2px solid #e2e8f0; padding-top: 30px; }
+        .banks-section h2 { font-size: 1.5rem; color: #1a1a2e; margin-top: 0; margin-bottom: 12px; }
+        .bank-group-title { font-size: 1rem; color: #0f3460; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .bank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+        .bank-card { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #0f3460; border-radius: 12px; padding: 12px 14px; min-width: 0; }
+        .bank-card.national { border-left-color: #718096; }
+        .bank-name { font-weight: 700; color: #1a202c; font-size: 0.95rem; margin-bottom: 4px; }
+        .bank-meta { font-size: 0.8rem; color: #4a5568; line-height: 1.5; }
+        .bank-card a { font-size: 0.8rem; color: #0f3460; font-weight: 600; }
+        .banks-empty { color: #666; font-style: italic; padding: 14px 0; }
+        .banks-warning { font-size: 0.85rem; background: #fefcbf; color: #744210; border-radius: 10px; padding: 10px 12px; margin-top: 20px; line-height: 1.5; }
+        .banks-warning a, .banks-intro a { color: #0f3460; font-weight: 600; }
+        .banks-intro { font-size: 0.9rem; color: #4a5568; margin-bottom: 15px; line-height: 1.5; }
+        .bank-card, .bank-meta, .banks-warning, .banks-intro, .bank-name { overflow-wrap: anywhere; word-break: break-word; }
 
         /* Responsive */
         @media (max-width: 700px) {
@@ -349,6 +395,12 @@
                 <option value="non">Non (ou je ne suis pas dans les exceptions)</option>
             </select>
         </div>
+
+        <div class="form-group">
+            <label for="age">Âge de l'emprunteur le plus âgé (facultatif)</label>
+            <input type="number" id="age" placeholder="Ex : 38" min="18" max="99" step="1">
+            <span class="hint">Aucune limite d'âge légale : l'âge influe surtout sur la durée du prêt et l'assurance emprunteur.</span>
+        </div>
     </div>
 
     <button id="simulateBtn" type="button">Estimer mes prêts</button>
@@ -363,7 +415,7 @@
         </div>
     </div>
 
-    <!-- Section des conditions d'accès -->
+    <!-- Section des conditions d'accès (dépliants) -->
     <div class="conditions-section">
         <h2>📋 Conditions d'accès (synthèse)</h2>
         <div class="verify-note">
@@ -374,40 +426,73 @@
         </div>
 
         <!-- PTZ -->
-        <div class="condition-card">
-            <h3>🔹 Prêt à Taux Zéro (PTZ) <span class="tag">Primo-accédant requis</span></h3>
-            <ul>
-                <li><strong>Statut :</strong> réservé aux <strong>primo-accédants</strong> (personnes n'ayant pas été propriétaires de leur résidence principale au cours des 2 dernières années). Des exceptions existent (titulaire d'une carte d'invalidité, bénéficiaire de l'AAH, victime de sinistre).</li>
-                <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
-                <li><strong>Revenus :</strong> le RFR (N-2) ne doit pas dépasser un plafond fixé selon la zone et le nombre de personnes. Exemple en zone A : 49 000 € pour 1 personne, 102 900 € pour 4 personnes.</li>
-                <li><strong>Opérations :</strong> depuis le 1er avril 2025, le PTZ est ouvert à tous les logements neufs, dans toutes les communes. Pour l'ancien avec travaux, des conditions spécifiques s'appliquent : à vérifier avant de vous engager.</li>
-                <li><strong>Montant :</strong> le PTZ finance une quote-part du coût de l'opération, plafonné selon la zone et la taille du foyer : de 20 % à 50 % pour un appartement neuf, de 10 % à 30 % pour une maison individuelle neuve. Il ne finance jamais la totalité de l'achat et doit être complété par un autre prêt.</li>
-            </ul>
-        </div>
+        <details class="condition-details">
+            <summary>🔹 Prêt à Taux Zéro (PTZ) <span class="tag">Primo-accédant requis</span></summary>
+            <div class="condition-body">
+                <ul>
+                    <li><strong>Statut :</strong> réservé aux <strong>primo-accédants</strong> (personnes n'ayant pas été propriétaires de leur résidence principale au cours des 2 dernières années). Des exceptions existent (titulaire d'une carte d'invalidité, bénéficiaire de l'AAH, victime de sinistre).</li>
+                    <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
+                    <li><strong>Revenus :</strong> le RFR (N-2) ne doit pas dépasser un plafond fixé selon la zone et le nombre de personnes. Exemple en zone A : 49 000 € pour 1 personne, 102 900 € pour 4 personnes.</li>
+                    <li><strong>Opérations :</strong> depuis le 1er avril 2025, le PTZ est ouvert à tous les logements neufs, dans toutes les communes. Pour l'ancien avec travaux, des conditions spécifiques s'appliquent : à vérifier avant de vous engager.</li>
+                    <li><strong>Montant :</strong> le PTZ finance une quote-part du coût de l'opération, plafonné selon la zone et la taille du foyer : de 20 % à 50 % pour un appartement neuf, de 10 % à 30 % pour une maison individuelle neuve. Il ne finance jamais la totalité de l'achat et doit être complété par un autre prêt.</li>
+                    <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
+                </ul>
+            </div>
+        </details>
 
         <!-- PC -->
-        <div class="condition-card">
-            <h3>🔸 Prêt Conventionné (PC) <span class="tag">Sans condition de ressources</span></h3>
-            <ul>
-                <li><strong>Statut :</strong> accessible à <strong>tous</strong>, sans condition de ressources. La banque évalue votre capacité de remboursement.</li>
-                <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
-                <li><strong>Opérations :</strong> achat d'un terrain et construction, achat d'un logement neuf, achat dans l'ancien avec travaux, travaux d'amélioration ou d'économie d'énergie dans un logement ancien. Les conditions précises (montant des travaux, âge du logement) sont à confirmer avec la banque.</li>
-                <li><strong>Frais :</strong> certains frais (notaire, garantie, dossier, mobilier) ne sont en principe pas finançables par ce prêt : à confirmer.</li>
-                <li><strong>Taux :</strong> le taux est plafonné par la réglementation (plafond fixé par arrêté, variable selon la durée). Le taux réellement proposé dépend de chaque banque.</li>
-                <li><strong>Durée :</strong> de 5 à 35 ans selon les cas.</li>
-            </ul>
-        </div>
+        <details class="condition-details">
+            <summary>🔸 Prêt Conventionné (PC) <span class="tag">Sans condition de ressources</span></summary>
+            <div class="condition-body">
+                <ul>
+                    <li><strong>Statut :</strong> accessible à <strong>tous</strong>, sans condition de ressources. La banque évalue votre capacité de remboursement.</li>
+                    <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
+                    <li><strong>Opérations :</strong> achat d'un terrain et construction, achat d'un logement neuf, achat dans l'ancien avec travaux, travaux d'amélioration ou d'économie d'énergie dans un logement ancien. Les conditions précises (montant des travaux, âge du logement) sont à confirmer avec la banque.</li>
+                    <li><strong>Frais :</strong> certains frais (notaire, garantie, dossier, mobilier) ne sont en principe pas finançables par ce prêt : à confirmer.</li>
+                    <li><strong>Taux :</strong> le taux est plafonné par la réglementation (plafond fixé par arrêté, variable selon la durée). Le taux réellement proposé dépend de chaque banque.</li>
+                    <li><strong>Durée :</strong> de 5 à 35 ans selon les cas.</li>
+                    <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
+                </ul>
+            </div>
+        </details>
 
         <!-- PAS -->
-        <div class="condition-card">
-            <h3>🔹 Prêt d'Accession Sociale (PAS) <span class="tag">Revenus modestes</span></h3>
-            <ul>
-                <li><strong>Statut :</strong> réservé aux ménages aux <strong>revenus modestes</strong>. Les plafonds de ressources sont les <strong>mêmes que ceux du PTZ</strong> (RFR N-2, selon la zone et le nombre de personnes).</li>
-                <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong>.</li>
-                <li><strong>Opérations :</strong> mêmes opérations que le PC.</li>
-                <li><strong>Avantages :</strong> taux d'intérêt plafonné ; d'autres avantages (frais de dossier, garantie) existent : à confirmer auprès du prêteur.</li>
-                <li><strong>Cumul :</strong> le PAS peut se cumuler avec le PTZ.</li>
-            </ul>
+        <details class="condition-details">
+            <summary>🔹 Prêt d'Accession Sociale (PAS) <span class="tag">Revenus modestes</span></summary>
+            <div class="condition-body">
+                <ul>
+                    <li><strong>Statut :</strong> réservé aux ménages aux <strong>revenus modestes</strong>. Les plafonds de ressources sont les <strong>mêmes que ceux du PTZ</strong> (RFR N-2, selon la zone et le nombre de personnes).</li>
+                    <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong>.</li>
+                    <li><strong>Opérations :</strong> mêmes opérations que le PC.</li>
+                    <li><strong>Avantages :</strong> taux d'intérêt plafonné ; d'autres avantages (frais de dossier, garantie) existent : à confirmer auprès du prêteur.</li>
+                    <li><strong>Cumul :</strong> le PAS peut se cumuler avec le PTZ.</li>
+                    <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
+                </ul>
+            </div>
+        </details>
+    </div>
+
+    <!-- Section banques par département -->
+    <div class="banks-section" id="banques">
+        <h2>🏦 Où demander ces prêts dans le Sud ?</h2>
+        <div class="banks-intro">
+            PTZ, prêt conventionné (PC) et PAS ne sont accordés que par les établissements ayant signé une convention avec l'État
+            (liste officielle : <a href="https://www.fgas.fr/web/site-public/etablissements-affilies" target="_blank" rel="noopener noreferrer">SGFGAS</a>).
+            Choisissez votre département pour voir les réseaux bancaires implantés.
+        </div>
+        <div class="form-group">
+            <label for="deptSelect">Département du logement</label>
+            <select id="deptSelect">
+                <option value="">— Choisir un département —</option>
+            </select>
+        </div>
+        <div id="banksContent" aria-live="polite"></div>
+        <div class="banks-warning">
+            ⚠️ Liste indicative, établie à partir des territoires des réseaux régionaux (Crédit Agricole, Caisse d'Épargne,
+            Banque Populaire, Crédit Mutuel) et des grandes banques nationales. Une banque peut avoir quelques agences hors de
+            son territoire principal, et chaque établissement décide de ses critères : confirmez en agence qu'elle propose bien
+            le PTZ, le PC ou le PAS, puis comparez les TAEG de plusieurs offres. Un courtier ou l'
+            <a href="https://www.anil.org/qui-sommes-nous/reseau-des-adil/" target="_blank" rel="noopener noreferrer">ADIL</a> de votre département peut aussi vous orienter gratuitement.
         </div>
     </div>
 </div>
@@ -462,6 +547,27 @@
 
     function fmt(n) {
         return Math.round(n).toLocaleString('fr-FR');
+    }
+
+    // Âge : aucune limite légale. Repères de marché pour l'âge atteint en fin de prêt
+    // (variables selon les banques et les assureurs) : ~75 ans fréquent, 80 à 85 ans pour les plus souples.
+    const AGE_END_STANDARD = 75;
+    const AGE_END_LENIENT = 85;
+    const MAX_LOAN_YEARS = 30;   // durée de base du PC / PAS (jusqu'à 35 ans par allongement)
+    const MIN_LOAN_YEARS = 5;    // durée minimale du PC / PAS
+
+    function computeAgeInfo(rawAge) {
+        if (rawAge === '' || rawAge === null || rawAge === undefined) return null;
+        const age = parseInt(rawAge, 10);
+        if (!Number.isFinite(age)) return null;
+        if (age < 18 || age > 99) return { invalid: true, age: age };
+        const clampYears = function (y) { return Math.max(0, Math.min(MAX_LOAN_YEARS, y)); };
+        return {
+            invalid: false,
+            age: age,
+            yearsStandard: clampYears(AGE_END_STANDARD - age),
+            yearsLenient: clampYears(AGE_END_LENIENT - age)
+        };
     }
 
     function simulate(input) {
@@ -526,10 +632,13 @@
         // --- PAS : mêmes plafonds de ressources que le PTZ ---
         result.pas = incomeOk
             ? { eligible: true, message: `Éligible sur le critère de revenu (${fmt(income)} € ≤ plafond ${fmt(limit)} €, identique au PTZ).` }
-            : { eligible: false, message: `Non éligible : revenu ${fmt(income)} € supérieur au plafond de ${fmt(limit)} €.` };
+            : { eligible: false, message: `Non éligible : revenu ${fmt(income)} € supérieur au plafond ${fmt(limit)} €.` };
 
         // --- PC : sans condition de ressources ---
         result.pc = { eligible: true, message: "Accessible sans condition de ressources (taux d'intérêt plafonné par la réglementation)." };
+
+        // --- Âge (information seulement, aucun effet sur l'éligibilité réglementaire) ---
+        result.ageInfo = computeAgeInfo(input.age);
 
         return result;
     }
@@ -542,6 +651,35 @@
         return ok
             ? `<span class="badge badge-eligible">${okLabel}</span>`
             : `<span class="badge badge-ineligible">${koLabel}</span>`;
+    }
+
+    function renderAge(a) {
+        if (!a) return '';
+        if (a.invalid) {
+            return `<div class="info-flag">⚠️ Âge saisi (${a.age}) non pris en compte : indiquez un âge compris entre 18 et 99 ans.</div>`;
+        }
+        let txt = `🎂 <strong>Âge ${a.age} ans :</strong> la réglementation n'impose aucune limite d'âge pour le PTZ, le PC ou le PAS. ` +
+                  `L'âge compte surtout pour l'assurance emprunteur et la durée accordée, car les banques raisonnent sur l'âge atteint en fin de prêt. `;
+        if (a.yearsStandard >= MIN_LOAN_YEARS) {
+            txt += `Avec un repère de fin de prêt vers ${AGE_END_STANDARD} ans, la durée serait d'environ <strong>${a.yearsStandard} ans</strong> au maximum` +
+                   (a.yearsLenient > a.yearsStandard ? ` (jusqu'à environ ${a.yearsLenient} ans dans les banques les plus souples, ${AGE_END_LENIENT} ans en fin de prêt).` : '.');
+            if (a.yearsStandard < MAX_LOAN_YEARS) {
+                txt += ` Une durée plus courte augmente les mensualités et réduit le montant empruntable.`;
+            }
+        } else if (a.yearsLenient >= MIN_LOAN_YEARS) {
+            txt += `Avec un repère de fin de prêt vers ${AGE_END_STANDARD} ans, la durée possible serait inférieure à ${MIN_LOAN_YEARS} ans. ` +
+                   `Certaines banques acceptent jusqu'à ${AGE_END_LENIENT} ans en fin de prêt, soit environ <strong>${a.yearsLenient} ans</strong> au maximum : ` +
+                   `l'assurance sera plus chère et le dossier étudié de près.`;
+        } else {
+            txt += `Au-delà de ${AGE_END_LENIENT - MIN_LOAN_YEARS} ans, la durée possible tombe sous la durée minimale de ${MIN_LOAN_YEARS} ans du PC et du PAS : ` +
+                   `demandez directement à la banque quelles solutions elle propose.`;
+        }
+        if (a.age >= 55) {
+            txt += ` Si vous achetez en vue de la retraite, le logement doit devenir votre résidence principale au plus tard 1 an après l'achat ` +
+                   `(jusqu'à 6 ans dans certains cas, avec mise en location encadrée d'ici là).`;
+        }
+        txt += ` Ces repères sont indicatifs : la banque et l'assureur décident au cas par cas (la convention Aeras peut faciliter l'assurance en cas de problème de santé).`;
+        return `<div class="info-flag">${txt}</div>`;
     }
 
     function renderResults(r) {
@@ -568,6 +706,8 @@
         </div>
         <div class="result-sub">${r.pc.message}</div>`;
 
+        html += renderAge(r.ageInfo);
+
         if (r.floorIncomeWarning) {
             html += `<div class="info-flag">
                 ⚠️ Le coût de l'opération divisé par 9 (${fmt(r.cost / 9)} €) dépasse votre revenu saisi (${fmt(r.income)} €).
@@ -593,11 +733,87 @@
                 zone: document.getElementById('zone').value,
                 cost: document.getElementById('cost').value,
                 operation: document.getElementById('operation').value,
-                primo: document.getElementById('primo').value === 'oui'
+                primo: document.getElementById('primo').value === 'oui',
+                age: document.getElementById('age').value
             });
             document.getElementById('resultsContent').innerHTML = renderResults(result);
             document.getElementById('results').classList.add('show');
         });
+    }
+
+    // =====================================================================
+    // BANQUES PAR DÉPARTEMENT (indicatif : territoires des réseaux régionaux)
+    // À réviser régulièrement ; liste officielle des établissements affiliés : fgas.fr
+    // =====================================================================
+    const DEPARTMENTS = {
+        '04': 'Alpes-de-Haute-Provence', '05': 'Hautes-Alpes', '06': 'Alpes-Maritimes',
+        '07': 'Ardèche', '11': 'Aude', '13': 'Bouches-du-Rhône', '26': 'Drôme',
+        '30': 'Gard', '34': 'Hérault', '48': 'Lozère', '83': 'Var', '84': 'Vaucluse'
+    };
+
+    const REGIONAL_BANKS = [
+        { name: 'Crédit Agricole Alpes Provence',      group: 'Crédit Agricole',   depts: ['05','13','84'],            url: 'https://www.credit-agricole.fr/caisses-regionales.html' },
+        { name: 'Crédit Agricole Provence Côte d\'Azur', group: 'Crédit Agricole', depts: ['04','06','83'],            url: 'https://www.credit-agricole.fr/caisses-regionales.html' },
+        { name: 'Crédit Agricole Languedoc',           group: 'Crédit Agricole',   depts: ['11','30','34','48'],       url: 'https://www.credit-agricole.fr/caisses-regionales.html' },
+        { name: 'Crédit Agricole Sud Rhône Alpes',     group: 'Crédit Agricole',   depts: ['07','26'],                 url: 'https://www.credit-agricole.fr/caisses-regionales.html' },
+        { name: 'Caisse d\'Épargne CEPAC',             group: 'Caisse d\'Épargne', depts: ['04','05','13','84'],       url: 'https://www.caisse-epargne.fr' },
+        { name: 'Caisse d\'Épargne Côte d\'Azur',      group: 'Caisse d\'Épargne', depts: ['06','83'],                 url: 'https://www.caisse-epargne.fr' },
+        { name: 'Caisse d\'Épargne Languedoc-Roussillon', group: 'Caisse d\'Épargne', depts: ['11','30','34','48'],    url: 'https://www.caisse-epargne.fr' },
+        { name: 'Caisse d\'Épargne Loire Drôme Ardèche', group: 'Caisse d\'Épargne', depts: ['07','26'],               url: 'https://www.caisse-epargne.fr' },
+        { name: 'Banque Populaire Méditerranée',       group: 'Banque Populaire',  depts: ['06','13','26','30','34','83','84'], url: 'https://www.banquepopulaire.fr' },
+        { name: 'Banque Populaire du Sud',             group: 'Banque Populaire',  depts: ['07','11','30','34','48'],  url: 'https://www.banquepopulaire.fr/sud/' },
+        { name: 'Banque Populaire Auvergne et Rhône-Alpes', group: 'Banque Populaire', depts: ['07','26'],             url: 'https://www.banquepopulaire.fr' },
+        { name: 'Crédit Mutuel Méditerranéen',         group: 'Crédit Mutuel',     depts: ['04','05','06','11','13','30','34','83','84'], url: 'https://www.creditmutuel.fr' },
+        { name: 'Crédit Mutuel Massif Central',        group: 'Crédit Mutuel',     depts: ['48'],                      url: 'https://www.creditmutuel.fr' },
+        { name: 'Crédit Mutuel Sud-Est',               group: 'Crédit Mutuel',     depts: ['07','26'],                 url: 'https://www.creditmutuel.fr' }
+    ];
+
+    const NATIONAL_BANKS = [
+        { name: 'BNP Paribas',       url: 'https://mabanque.bnpparibas' },
+        { name: 'Société Générale',  url: 'https://particuliers.sg.fr' },
+        { name: 'LCL',               url: 'https://www.lcl.fr' },
+        { name: 'La Banque Postale', url: 'https://www.labanquepostale.fr' },
+        { name: 'CIC',               url: 'https://www.cic.fr' }
+    ];
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function bankCard(b, national) {
+        const meta = national ? 'Réseau national, agences dans tout le département'
+                              : escapeHtml(b.group) + ' · réseau régional';
+        return '<div class="bank-card' + (national ? ' national' : '') + '">' +
+               '<div class="bank-name">' + escapeHtml(b.name) + '</div>' +
+               '<div class="bank-meta">' + meta + '</div>' +
+               '<a href="' + b.url + '" target="_blank" rel="noopener noreferrer">Site de la banque ↗</a>' +
+               '</div>';
+    }
+
+    function renderBanks(code) {
+        const box = document.getElementById('banksContent');
+        if (!code || !DEPARTMENTS[code]) { box.innerHTML = ''; return; }
+        const regional = REGIONAL_BANKS.filter(function (b) { return b.depts.indexOf(code) !== -1; });
+        let html = '<h3 class="bank-group-title">🔹 Banques régionales — ' + escapeHtml(DEPARTMENTS[code]) + ' (' + code + ')</h3>';
+        html += regional.length
+            ? '<div class="bank-grid">' + regional.map(function (b) { return bankCard(b, false); }).join('') + '</div>'
+            : '<div class="banks-empty">Aucun réseau régional recensé pour ce département.</div>';
+        html += '<h3 class="bank-group-title">🔸 Banques nationales</h3>';
+        html += '<div class="bank-grid">' + NATIONAL_BANKS.map(function (b) { return bankCard(b, true); }).join('') + '</div>';
+        box.innerHTML = html;
+    }
+
+    if (typeof document !== 'undefined') {
+        const sel = document.getElementById('deptSelect');
+        Object.keys(DEPARTMENTS).forEach(function (code) {
+            const o = document.createElement('option');
+            o.value = code;
+            o.textContent = code + ' – ' + DEPARTMENTS[code];
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', function () { renderBanks(sel.value); });
     }
 </script>
 </body>
