@@ -304,6 +304,7 @@
 
         /* ===== Financement : apport et mensualités ===== */
         .form-subtitle { margin: 6px 0 0; font-size: 1.05rem; color: #0f3460; border-top: 1px dashed #cbd5e0; padding-top: 14px; }
+        .badge-conditional { background: #fefcbf; color: #744210; }
         .form-group[hidden] { display: none; }
         .financing-box { margin-top: 18px; }
         .financing-box h4 { margin: 0 0 8px; color: #16213e; font-size: 1.05rem; }
@@ -377,7 +378,7 @@
         <div class="form-group">
             <label for="income">Revenu fiscal de référence (RFR) N-2</label>
             <input type="number" id="income" placeholder="Ex : 35000" value="35000" min="0" step="1000">
-            <span class="hint">Total des RFR des personnes qui occuperont le logement. Pour une offre de prêt émise en 2026 : RFR 2024, indiqué sur l'avis d'imposition 2025.</span>
+            <span class="hint">Total des RFR des personnes qui occuperont le logement. Pour une offre de prêt émise en 2026 : RFR 2024, indiqué sur l'avis d'imposition 2025. Pour le PTZ, le simulateur retient le plus élevé entre ce RFR et le coût de l'opération ÷ 9.</span>
         </div>
 
         <div class="form-group">
@@ -402,9 +403,16 @@
             <select id="operation">
                 <option value="neuf-collectif" selected>Logement neuf : appartement (collectif)</option>
                 <option value="neuf-individuel">Logement neuf : maison individuelle</option>
-                <option value="autre">Ancien avec travaux ou autre cas (montant PTZ non calculé)</option>
+                <option value="ancien-travaux">Logement ancien avec travaux (montant PTZ non calculé)</option>
+                <option value="ancien-sans">Logement ancien sans travaux</option>
             </select>
             <span class="hint">Le montant du PTZ n'est calculé que pour le logement neuf.</span>
+        </div>
+
+        <div class="form-group" id="worksGroup" hidden>
+            <label for="works">Dont montant des travaux (€, facultatif)</label>
+            <input type="number" id="works" placeholder="Ex : 15000" min="0" step="1000">
+            <span class="hint">Pour le PTZ dans l'ancien, les travaux doivent représenter au moins 25 % du coût total de l'opération (prix + travaux).</span>
         </div>
 
         <div class="form-group">
@@ -457,6 +465,12 @@
         </div>
 
         <div class="form-group">
+            <label for="netIncome">Revenus nets mensuels actuels du foyer (€, facultatif)</label>
+            <input type="number" id="netIncome" placeholder="Ex : 1800 (0 si aucun revenu)" min="0" step="50">
+            <span class="hint">Distinct du RFR : sert à vérifier si la mensualité reste sous 35 % de vos revenus, seuil que les banques appliquent en général.</span>
+        </div>
+
+        <div class="form-group">
             <label for="includePtz">Déduire le PTZ estimé du prêt principal ?</label>
             <select id="includePtz">
                 <option value="oui" selected>Oui (si le PTZ est calculé)</option>
@@ -484,7 +498,7 @@
             Synthèse indicative établie à partir de sources publiques. Les conditions évoluent : vérifiez-les sur
             <a href="https://www.service-public.gouv.fr" target="_blank" rel="noopener noreferrer">service-public.gouv.fr</a>
             et sur le simulateur de l'<a href="https://www.anil.org" target="_blank" rel="noopener noreferrer">ANIL</a>
-            avant toute décision. Dernière révision de ce fichier : novembre 2026.
+            avant toute décision. Dernière révision de ce fichier : novembre 2026 (V6 : contrôle des barèmes et des règles de calcul sur les fiches Service-Public PTZ, PC et PAS).
         </div>
 
         <!-- PTZ -->
@@ -492,11 +506,12 @@
             <summary>🔹 Prêt à Taux Zéro (PTZ) <span class="tag">Primo-accédant requis</span></summary>
             <div class="condition-body">
                 <ul>
-                    <li><strong>Statut :</strong> réservé aux <strong>primo-accédants</strong> (personnes n'ayant pas été propriétaires de leur résidence principale au cours des 2 dernières années). Des exceptions existent (titulaire d'une carte d'invalidité, bénéficiaire de l'AAH, victime de sinistre).</li>
-                    <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
-                    <li><strong>Revenus :</strong> le RFR (N-2) ne doit pas dépasser un plafond fixé selon la zone et le nombre de personnes. Exemple en zone A : 49 000 € pour 1 personne, 102 900 € pour 4 personnes.</li>
-                    <li><strong>Opérations :</strong> depuis le 1er avril 2025, le PTZ est ouvert à tous les logements neufs, dans toutes les communes. Pour l'ancien avec travaux, des conditions spécifiques s'appliquent : à vérifier avant de vous engager.</li>
-                    <li><strong>Montant :</strong> le PTZ finance une quote-part du coût de l'opération, plafonné selon la zone et la taille du foyer : de 20 % à 50 % pour un appartement neuf, de 10 % à 30 % pour une maison individuelle neuve. Il ne finance jamais la totalité de l'achat et doit être complété par un autre prêt.</li>
+                    <li><strong>Statut :</strong> réservé aux <strong>primo-accédants</strong> (personnes n'ayant pas été propriétaires de leur résidence principale au cours des 2 dernières années). Exceptions : usufruit ou nue-propriété de la résidence principale ; carte mobilité inclusion « invalidité » ou carte d'invalidité (2e ou 3e catégorie), AAH ou AEEH pour vous ou un occupant ; logement rendu définitivement inhabitable par une catastrophe naturelle ou technologique (demande dans les 2 ans suivant l'arrêté).</li>
+                    <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> au plus tard 1 an après l'achat ou la fin des travaux (ou, au plus tard 6 ans après, à votre départ à la retraite, avec location encadrée d'ici là), et vous devez l'habiter au moins 8 mois par an.</li>
+                    <li><strong>Revenus :</strong> le revenu retenu, c'est-à-dire le plus élevé entre le RFR total (N-2) et le coût TTC de l'opération ÷ 9, ne doit pas dépasser un plafond fixé selon la zone et le nombre de personnes. Exemple en zone A : 49 000 € pour 1 personne, 102 900 € pour 4 personnes.</li>
+                    <li><strong>Opérations :</strong> depuis le 1er avril 2025, le PTZ est ouvert à tous les logements neufs, dans toutes les communes. Dans l'ancien : uniquement en zones B2 et C, avec des travaux d'au moins 25 % du coût total de l'opération et une performance énergétique à atteindre après travaux (classe D du DPE, ou moins de 331 kWh/m²/an si un DPE antérieur au 30 juin 2021 est encore valide).</li>
+                    <li><strong>Montant :</strong> le PTZ finance une quote-part du coût de l'opération, plafonné selon la zone et la taille du foyer : de 20 % à 50 % pour un appartement neuf, de 10 % à 30 % pour une maison individuelle neuve. Il ne finance jamais la totalité de l'achat et doit être complété par au moins un autre prêt : son montant ne peut pas dépasser celui des autres prêts de plus de 2 ans (125 % en tranche 1).</li>
+                    <li><strong>Durée :</strong> 25 ans maximum, remboursement en une ou deux périodes (différé d'au moins 2 ans possible) ; la durée dépend des revenus.</li>
                     <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
                 </ul>
             </div>
@@ -509,10 +524,11 @@
                 <ul>
                     <li><strong>Statut :</strong> accessible à <strong>tous</strong>, sans condition de ressources. La banque évalue votre capacité de remboursement.</li>
                     <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong> (délais et cas particuliers à vérifier).</li>
-                    <li><strong>Opérations :</strong> achat d'un terrain et construction, achat d'un logement neuf, achat dans l'ancien avec travaux, travaux d'amélioration ou d'économie d'énergie dans un logement ancien. Les conditions précises (montant des travaux, âge du logement) sont à confirmer avec la banque.</li>
-                    <li><strong>Frais :</strong> certains frais (notaire, garantie, dossier, mobilier) ne sont en principe pas finançables par ce prêt : à confirmer.</li>
+                    <li><strong>Opérations :</strong> achat d'un terrain et construction, achat d'un logement neuf, achat dans l'ancien (avec éventuels travaux d'amélioration : au moins 4 000 € et logement achevé depuis au moins 10 ans), transformation d'un local en logement, agrandissement par extension ou surélévation, travaux d'économie d'énergie (au moins 4 000 €, dans un logement existant au 1er juillet 1981).</li>
+                    <li><strong>Frais :</strong> le prêt peut financer la totalité de l'opération, mais pas les frais de notaire, les frais d'hypothèque, les frais d'instruction du dossier ni l'achat de meubles.</li>
                     <li><strong>Taux :</strong> le taux est plafonné par la réglementation (plafond fixé par arrêté, variable selon la durée). Le taux réellement proposé dépend de chaque banque.</li>
-                    <li><strong>Durée :</strong> de 5 à 35 ans selon les cas.</li>
+                    <li><strong>Durée :</strong> de 5 à 30 ans, avec une possibilité de modification prévue au contrat jusqu'à 35 ans au total.</li>
+                    <li><strong>Cumul :</strong> il peut être complété par un apport, un PTZ, un prêt épargne logement ou un prêt complémentaire, mais pas par un prêt immobilier « classique ».</li>
                     <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
                 </ul>
             </div>
@@ -523,11 +539,11 @@
             <summary>🔹 Prêt d'Accession Sociale (PAS) <span class="tag">Revenus modestes</span></summary>
             <div class="condition-body">
                 <ul>
-                    <li><strong>Statut :</strong> réservé aux ménages aux <strong>revenus modestes</strong>. Les plafonds de ressources sont les <strong>mêmes que ceux du PTZ</strong> (RFR N-2, selon la zone et le nombre de personnes).</li>
+                    <li><strong>Statut :</strong> réservé aux ménages aux <strong>revenus modestes</strong>. Condition de ressources fondée sur le total des RFR N-2 des personnes à loger, selon la zone et le nombre de personnes. La fiche officielle ne chiffre pas les plafonds ; les barèmes publiés les alignent sur ceux du PTZ (à confirmer sur le simulateur officiel du PAS).</li>
                     <li><strong>Logement :</strong> il doit devenir votre <strong>résidence principale</strong>.</li>
                     <li><strong>Opérations :</strong> mêmes opérations que le PC.</li>
-                    <li><strong>Avantages :</strong> taux d'intérêt plafonné ; d'autres avantages (frais de dossier, garantie) existent : à confirmer auprès du prêteur.</li>
-                    <li><strong>Cumul :</strong> le PAS peut se cumuler avec le PTZ.</li>
+                    <li><strong>Avantages :</strong> taux d'intérêt plafonné, frais d'instruction du dossier plafonnés, émoluments de notaire réduits, garantie par sûreté réelle (hypothèque ou privilège de prêteur de deniers) exonérée de taxes de publicité foncière.</li>
+                    <li><strong>Cumul :</strong> le PAS peut se cumuler avec le PTZ, un apport, un prêt épargne logement ou un prêt complémentaire, mais pas avec un prêt immobilier « classique ».</li>
                     <li><strong>Âge :</strong> aucune limite d'âge légale. En pratique, la banque et l'assureur regardent l'âge atteint en fin de prêt (repère fréquent : 75 ans, jusqu'à 80-85 ans selon les établissements), ce qui limite la durée.</li>
                 </ul>
             </div>
@@ -581,8 +597,8 @@
         'C':  [15000, 19500, 24000, 28500]
     };
 
-    // Coefficient familial en vigueur (1 à 8 personnes et plus)
-    const FAMILY_COEFFICIENT = { 1: 1, 2: 1.5, 3: 1.8, 4: 2.1, 5: 2.4, 6: 2.7, 7: 3.0, 8: 3.3 };
+    // Coefficient familial (service-public.gouv.fr, fiche PTZ) : 2,4 à partir de 5 personnes
+    const FAMILY_COEFFICIENT = { 1: 1, 2: 1.5, 3: 1.8, 4: 2.1, 5: 2.4, 6: 2.4, 7: 2.4, 8: 2.4 };
 
     // Plafonds du coût d'opération pris en compte par le PTZ (5 = 5 personnes et plus)
     const OPERATION_CAPS = {
@@ -597,6 +613,9 @@
         'neuf-collectif':   [0.50, 0.40, 0.40, 0.20],
         'neuf-individuel':  [0.30, 0.20, 0.20, 0.10]
     };
+
+    // Dans l'ancien avec travaux (zones B2 et C), les quotités sont celles de l'appartement neuf
+    const QUOTITES_ANCIEN = [0.50, 0.40, 0.40, 0.20];
 
     const OPERATION_LABELS = {
         'neuf-collectif': 'appartement neuf',
@@ -673,11 +692,20 @@
         const rateValid = Number.isFinite(rawRate) && rawRate >= 0 && rawRate <= 15;
         const rate = rateValid ? rawRate : DEFAULT_RATE;
 
+        const rawNet = parseDecimal(input.netIncome);
+        const netIncome = (Number.isFinite(rawNet) && rawNet >= 0) ? rawNet : null;
+
         const rawIns = parseDecimal(input.insurance);
         const insurance = (Number.isFinite(rawIns) && rawIns >= 0 && rawIns <= 5) ? rawIns : 0;
 
-        const ptzAmount = (input.includePtz !== false && result.ptz.eligible && typeof result.ptz.amount === 'number')
-            ? Math.min(result.ptz.amount, cost - apport) : 0;
+        // Le PTZ ne peut pas dépasser le montant des autres prêts (tranches 2 à 4),
+        // ni 125 % de ce montant (tranche 1). Avec principal = coût - apport - PTZ :
+        // PTZ <= k * principal  <=>  PTZ <= (coût - apport) * k / (1 + k)
+        const k = result.ptz.tranche === 1 ? 1.25 : 1;
+        const ptzCeiling = Math.max(cost - apport, 0) * k / (1 + k);
+        const ptzWanted = (input.includePtz !== false && result.ptz.eligible && typeof result.ptz.amount === 'number')
+            ? result.ptz.amount : 0;
+        const ptzAmount = Math.min(ptzWanted, ptzCeiling);
         const principal = Math.max(cost - apport - ptzAmount, 0);
 
         const ageInfo = result.ageInfo && !result.ageInfo.invalid ? result.ageInfo : null;
@@ -695,6 +723,8 @@
                 monthly: monthly,
                 monthlyIns: monthlyIns,
                 monthlyTotal: monthly + monthlyIns,
+                minNetIncome: (monthly + monthlyIns) / 0.35,
+                debtRatio: netIncome > 0 ? (monthly + monthlyIns) / netIncome * 100 : null,
                 interest: Math.max(monthly * years * 12 - principal, 0),
                 ceilingRate: ceil,
                 ceilingMonthly: monthlyPayment(principal, ceil, years),
@@ -705,8 +735,8 @@
 
         return {
             cost: cost, apport: apport, apportPct: apport / cost * 100,
-            ptzAmount: ptzAmount, principal: principal,
-            rate: rate, rateDefaulted: !rateValid, insurance: insurance,
+            ptzAmount: ptzAmount, ptzCapped: ptzAmount < ptzWanted, principal: principal,
+            rate: rate, rateDefaulted: !rateValid, insurance: insurance, netIncome: netIncome,
             rows: rows, hasAge: !!ageInfo
         };
     }
@@ -720,31 +750,43 @@
         const primo = input.primo === true;
 
         const limit = INCOME_LIMITS[zone][persons];
-        const incomeOk = income <= limit;
+        // PTZ : revenu retenu = le plus élevé entre le RFR total et le coût TTC de l'opération ÷ 9
+        const retainedIncome = Math.max(income, cost / 9);
+        const floorApplied = cost / 9 > income;
+        const incomeOk = retainedIncome <= limit;     // critère PTZ
+        const pasIncomeOk = income <= limit;          // PAS : la fiche officielle ne cite que le RFR N-2
         const coef = FAMILY_COEFFICIENT[persons];
-        const quotient = income / coef;
+        const quotient = retainedIncome / coef;
         const thresholds = TRANCHE_THRESHOLDS[zone];
+        const trancheOf = function (q) {
+            return q <= thresholds[0] ? 1 : q <= thresholds[1] ? 2 : q <= thresholds[2] ? 3 : 4;
+        };
+        const tranche = trancheOf(quotient);
 
-        let tranche = 4;
-        if (quotient <= thresholds[0]) tranche = 1;
-        else if (quotient <= thresholds[1]) tranche = 2;
-        else if (quotient <= thresholds[2]) tranche = 3;
+        // Le plancher (coût ÷ 9) n'est signalé que s'il change réellement le résultat
+        const trancheWithoutFloor = trancheOf(income / coef);
+        const floorMatters = floorApplied && (
+            (income <= limit) !== incomeOk || trancheWithoutFloor !== tranche
+        );
+        const incomeLabel = floorMatters
+            ? `revenus déclarés (${fmt(income)} €, portés à ${fmt(retainedIncome)} € par la règle du revenu plancher)`
+            : `revenus déclarés (${fmt(income)} €)`;
 
         const result = {
             persons, income, cost, zone, limit, incomeOk,
             // Un « revenu plancher » (coût de l'opération divisé par 9) peut être retenu par le prêteur
-            floorIncomeWarning: cost / 9 > income
+            floorIncomeApplied: floorMatters, floorApplied, retainedIncome, trancheWithoutFloor, tranche, incomeWithoutFloorOk: income <= limit
         };
 
         // --- PTZ ---
         const ptz = { eligible: false, message: '', detail: '' };
         if (!primo) {
-            ptz.message = "Non éligible : il faut être primo-accédant (sauf exceptions : carte d'invalidité, AAH, sinistre).";
+            ptz.message = "Non éligible : il faut ne pas avoir été propriétaire de sa résidence principale au cours des 2 dernières années. Exceptions : usufruit ou nue-propriété de la résidence principale ; carte mobilité inclusion « invalidité » ou carte d'invalidité (2e ou 3e catégorie), AAH ou AEEH pour vous ou un occupant ; logement rendu définitivement inhabitable par une catastrophe naturelle ou technologique (demande dans les 2 ans suivant l'arrêté).";
         } else if (!incomeOk) {
-            ptz.message = `Non éligible : revenu ${fmt(income)} € supérieur au plafond de ${fmt(limit)} € (${persons} pers., zone ${zone}).`;
+            ptz.message = `Non éligible : vos ${incomeLabel} dépassent le plafond de ${fmt(limit)} € (${persons} pers., zone ${zone}).`;
         } else {
             ptz.eligible = true;
-            ptz.message = `Éligible sur le critère de revenu (${fmt(income)} € ≤ plafond ${fmt(limit)} €).`;
+            ptz.message = `Éligible sur le critère de revenu (vos ${incomeLabel} sont sous le plafond de ${fmt(limit)} €).`;
             ptz.tranche = tranche;
             ptz.quotient = quotient;
             const quotites = QUOTITES[operation];
@@ -765,18 +807,57 @@
             } else {
                 ptz.detail =
                     `Tranche ${tranche} (revenu ÷ coefficient ${coef.toString().replace('.', ',')} ≈ ${fmt(quotient)} €). ` +
-                    `Montant non calculé pour ce type d'opération : vérifiez les conditions applicables à l'ancien avec travaux.`;
+                    `Dans l'ancien, le montant n'est estimé que si vous saisissez le montant des travaux (au moins 25 % du coût total).`;
+            }
+        }
+        // Statut PTZ : ok / cond (sous conditions) / ko
+        ptz.status = ptz.eligible ? 'ok' : 'ko';
+        if (ptz.eligible && !QUOTITES[operation]) {
+            // Ancien : zones B2 et C uniquement, travaux >= 25 % du coût total de l'opération
+            const works = Math.max(Number(input.works) || 0, 0);
+            const ratio = cost > 0 ? works / cost : 0;
+            if (zone !== 'B2' && zone !== 'C') {
+                ptz.eligible = false; ptz.status = 'ko'; ptz.detail = '';
+                ptz.message = `Non éligible : dans l'ancien, le PTZ est réservé aux zones B2 et C (zone ${zone} saisie).`;
+            } else if (operation === 'ancien-sans') {
+                ptz.eligible = false; ptz.status = 'ko'; ptz.detail = '';
+                ptz.message = "Non éligible : dans l'ancien, le PTZ exige des travaux représentant au moins 25 % du coût total de l'opération.";
+            } else if (works > 0 && ratio < 0.25) {
+                ptz.eligible = false; ptz.status = 'ko'; ptz.detail = '';
+                ptz.message = `Non éligible : travaux de ${fmt(works)} € = ${fmt(ratio * 100)} % du coût total (${fmt(cost)} €), alors qu'il en faut au moins 25 %.`;
+            } else {
+                ptz.status = 'cond';
+                ptz.message = `Sous conditions : vos ${incomeLabel} respectent le plafond de ${fmt(limit)} €, mais dans l'ancien il faut des travaux d'au moins 25 % du coût total de l'opération (prix + travaux)` +
+                    (works > 0 ? ` : ${fmt(works)} € saisis = ${fmt(ratio * 100)} %, condition respectée.`
+                               : `, soit au moins ${fmt(cost / 4)} € de travaux pour un coût total de ${fmt(cost)} €.`) +
+                    ` Après travaux, le logement doit atteindre au moins la classe D du DPE (ou, si un DPE antérieur au 30 juin 2021 est encore valide, une consommation inférieure à 331 kWh/m²/an). Les travaux ne peuvent commencer qu'après l'émission de l'offre de prêt (sauf VIR ou PSLA) et doivent être achevés dans les 3 ans. Le logement doit devenir votre résidence principale.`;
+                if (works > 0) {
+                    const cap = OPERATION_CAPS[zone][Math.min(persons, 5)];
+                    const base = Math.min(cost, cap);
+                    const quotite = QUOTITES_ANCIEN[tranche - 1];
+                    ptz.cap = cap; ptz.base = base; ptz.quotite = quotite;
+                    ptz.amount = base * quotite;
+                    ptz.detail =
+                        `Tranche ${tranche} (revenu ÷ coefficient ${coef.toString().replace('.', ',')} ≈ ${fmt(quotient)} €). ` +
+                        `Pour un logement ancien avec travaux, quotité de ${Math.round(quotite * 100)} % ` +
+                        `appliquée à un coût retenu de ${fmt(base)} € ` +
+                        (cost > cap ? `(coût plafonné à ${fmt(cap)} €)` : `(plafond d'opération : ${fmt(cap)} €)`) +
+                        `. Montant maximum estimé : ${fmt(ptz.amount)} €, sous réserve du respect des conditions ci-dessus.`;
+                }
             }
         }
         result.ptz = ptz;
 
         // --- PAS : mêmes plafonds de ressources que le PTZ ---
-        result.pas = incomeOk
-            ? { eligible: true, message: `Éligible sur le critère de revenu (${fmt(income)} € ≤ plafond ${fmt(limit)} €, identique au PTZ).` }
-            : { eligible: false, message: `Non éligible : revenu ${fmt(income)} € supérieur au plafond ${fmt(limit)} €.` };
+        // La fiche officielle du PAS ne chiffre pas les plafonds : les barèmes publiés les alignent sur ceux du PTZ.
+        result.pas = pasIncomeOk
+            ? { eligible: true, message: `Éligible sur le critère de revenu (RFR ${fmt(income)} € ≤ plafond ${fmt(limit)} €, barème identique au PTZ selon les sources publiées). À confirmer sur le simulateur officiel du PAS de service-public.gouv.fr.` }
+            : { eligible: false, message: `Non éligible : RFR ${fmt(income)} € supérieur au plafond ${fmt(limit)} € (barème identique au PTZ selon les sources publiées).` };
+
+        result.pas.status = result.pas.eligible ? 'ok' : 'ko';
 
         // --- PC : sans condition de ressources ---
-        result.pc = { eligible: true, message: "Accessible sans condition de ressources (taux d'intérêt plafonné par la réglementation)." };
+        result.pc = { eligible: true, status: 'cond', message: "Aucune condition de ressources (taux d'intérêt plafonné par la réglementation). Comme pour tout crédit, la banque apprécie ensuite votre capacité de remboursement : préparez l'ensemble de vos ressources." };
 
         // --- Âge (information seulement, aucun effet sur l'éligibilité réglementaire) ---
         result.ageInfo = computeAgeInfo(input.age);
@@ -790,6 +871,12 @@
     // =====================================================================
     // AFFICHAGE
     // =====================================================================
+
+    function badgeStatus(status, okLabel, condLabel) {
+        if (status === 'ok')   return `<span class="badge badge-eligible">${okLabel}</span>`;
+        if (status === 'cond') return `<span class="badge badge-conditional">${condLabel || 'Sous conditions'}</span>`;
+        return `<span class="badge badge-ineligible">Non éligible</span>`;
+    }
 
     function badge(ok, okLabel, koLabel) {
         return ok
@@ -826,12 +913,25 @@
         return `<div class="info-flag">${txt}</div>`;
     }
 
+    function renderCapacity(f) {
+        if (f.netIncome === null) return '';
+        if (f.netIncome <= 0) {
+            return `<div class="info-flag">ℹ️ Aucun revenu net renseigné : l'État n'impose aucune condition de ressources pour le PC, mais la banque examinera comment la mensualité sera remboursée (repère courant : moins de 35 % des revenus, assurance comprise). Précisez au conseiller toutes vos ressources (pension, allocations, rentes, loyers, épargne).</div>`;
+        }
+        const okRows = f.rows.filter(function (row) { return row.minNetIncome <= f.netIncome; });
+        if (okRows.length === 0) {
+            const cheapest = f.rows.reduce(function (a, b) { return a.minNetIncome < b.minNetIncome ? a : b; });
+            return `<div class="info-flag">⛔ Avec ${fmt(f.netIncome)} € nets par mois, aucune durée testée ne reste sous 35 % de taux d'endettement : il faudrait au moins ${fmt(cheapest.minNetIncome)} € même sur ${cheapest.years} ans.</div>`;
+        }
+        return `<div class="info-flag">✅ Avec ${fmt(f.netIncome)} € nets par mois, le taux d'endettement reste sous 35 % à partir de <strong>${okRows[0].years} ans</strong> de durée.</div>`;
+    }
+
     function renderFinancing(f) {
         if (!f) return '';
         let html = `<div class="financing-box"><h4>💶 Estimation des mensualités selon la durée</h4>`;
         html += `<div class="financing-summary">
             Coût de l'opération : <strong>${fmt(f.cost)} €</strong> · apport : <strong>${fmt(f.apport)} €</strong> (${fmt(f.apportPct)} %)` +
-            (f.ptzAmount > 0 ? ` · PTZ estimé déduit : <strong>${fmt(f.ptzAmount)} €</strong>` : '') +
+            (f.ptzAmount > 0 ? ` · PTZ estimé déduit : <strong>${fmt(f.ptzAmount)} €</strong>` + (f.ptzCapped ? ' <em>(réduit : le PTZ ne peut pas dépasser les autres prêts, ou 125 % en tranche 1)</em>' : '') : '') +
             `<br>Prêt principal estimé : <strong>${fmt(f.principal)} €</strong> à <strong>${String(f.rate).replace('.', ',')} %</strong>` +
             (f.insurance > 0 ? ` + assurance ${String(f.insurance).replace('.', ',')} %/an` : ' (hors assurance)') +
             (f.rateDefaulted ? ` <em>(taux saisi invalide : ${String(DEFAULT_RATE).replace('.', ',')} % utilisé)</em>` : '') +
@@ -841,13 +941,16 @@
             return html + `<div class="info-flag">L'apport${f.ptzAmount > 0 ? ' et le PTZ estimé couvrent' : ' couvre'} la totalité du coût saisi : aucun prêt principal n'est nécessaire dans cette estimation.</div></div>`;
         }
 
+        html += renderCapacity(f);
         html += `<div class="table-scroll"><table class="mens-table">
             <thead><tr>
                 <th>Durée</th>
                 <th>Mensualité${f.insurance > 0 ? ' (hors assurance)' : ''}</th>` +
                 (f.insurance > 0 ? `<th>Assurance / mois</th><th>Total / mois</th>` : '') +
                 `<th>Intérêts totaux</th>
-                <th>Au taux plafond PC/PAS</th>
+                <th>Revenu net mini (35 %)</th>` +
+                (f.netIncome !== null && f.netIncome > 0 ? `<th>Taux d'endettement</th>` : '') +
+                `<th>Au taux plafond PC/PAS</th>
             </tr></thead><tbody>`;
         f.rows.forEach(function (row) {
             const flag = row.ageFlag
@@ -859,7 +962,9 @@
                 <td class="main-val">${fmt(row.monthly)} €</td>` +
                 (f.insurance > 0 ? `<td>${fmt(row.monthlyIns)} €</td><td class="main-val">${fmt(row.monthlyTotal)} €</td>` : '') +
                 `<td>${fmt(row.interest)} €</td>
-                <td class="ceiling">${fmt(row.ceilingMonthly)} € <small>(${String(row.ceilingRate).replace('.', ',')} %)</small></td>
+                <td>${fmt(row.minNetIncome)} €</td>` +
+                (row.debtRatio !== null ? `<td class="${row.debtRatio > 35 ? 'age-ko' : 'age-ok'}">${fmt(row.debtRatio)} %</td>` : '') +
+                `<td class="ceiling">${fmt(row.ceilingMonthly)} € <small>(${String(row.ceilingRate).replace('.', ',')} %)</small></td>
             </tr>`;
         });
         html += `</tbody></table></div>`;
@@ -877,11 +982,11 @@
     }
 
     function renderResults(r) {
-        let html = '';
+        let html = `<div class="info-flag">ℹ️ Ces résultats vérifient les conditions réglementaires (ressources, zone, type d'opération). La banque décide ensuite selon vos revenus actuels et sa propre analyse du risque.</div>`;
 
         html += `<div class="result-item">
             <span class="result-label">Prêt à Taux Zéro (PTZ)</span>
-            <span class="result-value">${badge(r.ptz.eligible, 'Éligible', 'Non éligible')}</span>
+            <span class="result-value">${badgeStatus(r.ptz.status, 'Éligible (ressources)')}</span>
         </div>
         <div class="result-sub">${r.ptz.message}</div>`;
         if (r.ptz.detail) {
@@ -890,24 +995,28 @@
 
         html += `<div class="result-item">
             <span class="result-label">Prêt d'Accession Sociale (PAS)</span>
-            <span class="result-value">${badge(r.pas.eligible, 'Éligible', 'Non éligible')}</span>
+            <span class="result-value">${badgeStatus(r.pas.status, 'Éligible (ressources)')}</span>
         </div>
         <div class="result-sub">${r.pas.message}</div>`;
 
         html += `<div class="result-item">
             <span class="result-label">Prêt Conventionné (PC)</span>
-            <span class="result-value"><span class="badge badge-eligible">Accessible</span></span>
+            <span class="result-value">${badgeStatus('cond', '', 'Sous réserve de la banque')}</span>
         </div>
         <div class="result-sub">${r.pc.message}</div>`;
 
         html += renderAge(r.ageInfo);
         html += renderFinancing(r.financing);
 
-        if (r.floorIncomeWarning) {
+        if (r.floorIncomeApplied) {
+            const changes = (r.incomeWithoutFloorOk && !r.incomeOk)
+                ? `Avec cette règle, votre dossier dépasse le plafond de ressources du PTZ (${fmt(r.limit)} €).`
+                : `Avec cette règle, vous passez de la tranche ${r.trancheWithoutFloor} à la tranche ${r.tranche}, ce qui réduit la part du coût que le PTZ peut financer.`;
             html += `<div class="info-flag">
-                ⚠️ Le coût de l'opération divisé par 9 (${fmt(r.cost / 9)} €) dépasse votre revenu saisi (${fmt(r.income)} €).
-                Un « revenu plancher » peut alors être retenu par le prêteur pour apprécier les plafonds et la tranche :
-                faites vérifier votre situation par la banque ou sur le simulateur de l'ANIL.
+                ℹ️ <strong>Règle du « revenu plancher » (PTZ).</strong> Vos revenus déclarés sont de ${fmt(r.income)} €, mais le prix du bien est élevé :
+                la loi compare vos revenus à un neuvième du coût de l'opération (${fmt(r.cost / 9)} €) et retient le plus grand des deux.
+                Ce montant n'est pas un revenu qu'on vous attribue : il sert uniquement à vérifier le plafond et à fixer la tranche.
+                ${changes}
             </div>`;
         }
 
@@ -918,6 +1027,12 @@
         </div>`;
 
         return html;
+    }
+
+    if (typeof document !== 'undefined') {
+        document.getElementById('operation').addEventListener('change', function () {
+            document.getElementById('worksGroup').hidden = (this.value !== 'ancien-travaux');
+        });
     }
 
     if (typeof document !== 'undefined') {
@@ -940,7 +1055,9 @@
                 apportCustom: document.getElementById('apportCustom').value,
                 rate: document.getElementById('rate').value,
                 insurance: document.getElementById('insurance').value,
-                includePtz: document.getElementById('includePtz').value === 'oui'
+                includePtz: document.getElementById('includePtz').value === 'oui',
+                works: document.getElementById('works').value,
+                netIncome: document.getElementById('netIncome').value
             });
             document.getElementById('resultsContent').innerHTML = renderResults(result);
             document.getElementById('results').classList.add('show');
